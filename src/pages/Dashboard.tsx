@@ -1,0 +1,130 @@
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { RoomStatusGrid } from "@/components/dashboard/RoomStatusGrid";
+import { RecentGuests } from "@/components/dashboard/RecentGuests";
+import { AIAssistant } from "@/components/dashboard/AIAssistant";
+import { Users, Bed, DollarSign, UtensilsCrossed, TrendingUp, Calendar } from "lucide-react";
+
+// Mock data
+const stats = [
+  {
+    title: "Hóspedes Ativos",
+    value: 42,
+    change: "+8% vs. semana passada",
+    changeType: "positive" as const,
+    icon: <Users className="w-6 h-6 text-primary" />,
+  },
+  {
+    title: "Ocupação",
+    value: "78%",
+    change: "+12% vs. mês passado",
+    changeType: "positive" as const,
+    icon: <Bed className="w-6 h-6 text-primary" />,
+  },
+  {
+    title: "Receita Hoje",
+    value: "R$ 8.450",
+    change: "+R$ 1.200 vs. ontem",
+    changeType: "positive" as const,
+    icon: <DollarSign className="w-6 h-6 text-primary" />,
+  },
+  {
+    title: "Pedidos Restaurante",
+    value: 24,
+    change: "5 pendentes",
+    changeType: "neutral" as const,
+    icon: <UtensilsCrossed className="w-6 h-6 text-primary" />,
+  },
+];
+
+const rooms = Array.from({ length: 30 }, (_, i) => ({
+  id: `room-${i + 1}`,
+  number: String(100 + i + 1),
+  status: (
+    i < 15 ? "occupied" : i < 22 ? "available" : i < 27 ? "cleaning" : "maintenance"
+  ) as "occupied" | "available" | "cleaning" | "maintenance",
+  guest: i < 15 ? `Hóspede ${i + 1}` : undefined,
+}));
+
+const guests = [
+  {
+    id: "1",
+    name: "João Silva",
+    room: "101",
+    checkIn: "10/01",
+    checkOut: "15/01",
+    status: "checked-in" as const,
+  },
+  {
+    id: "2",
+    name: "Maria Santos",
+    room: "205",
+    checkIn: "12/01",
+    checkOut: "14/01",
+    status: "checking-out" as const,
+  },
+  {
+    id: "3",
+    name: "Pedro Oliveira",
+    room: "302",
+    checkIn: "14/01",
+    checkOut: "18/01",
+    status: "reserved" as const,
+  },
+  {
+    id: "4",
+    name: "Ana Costa",
+    room: "108",
+    checkIn: "08/01",
+    checkOut: "16/01",
+    status: "checked-in" as const,
+  },
+];
+
+export default function Dashboard() {
+  return (
+    <DashboardLayout>
+      <div className="p-6 lg:p-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground font-display">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Bem-vindo de volta! Aqui está o resumo do seu hotel.
+          </p>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="flex flex-wrap gap-3 mb-8">
+          <button className="px-4 py-2 rounded-lg bg-secondary text-secondary-foreground font-medium text-sm hover:bg-secondary/80 transition-colors flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            Nova Reserva
+          </button>
+          <button className="px-4 py-2 rounded-lg bg-success text-success-foreground font-medium text-sm hover:bg-success/80 transition-colors flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Check-in Rápido
+          </button>
+          <button className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/80 transition-colors flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Ver Relatórios
+          </button>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {stats.map((stat) => (
+            <StatCard key={stat.title} {...stat} />
+          ))}
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <RoomStatusGrid rooms={rooms} />
+          <RecentGuests guests={guests} />
+        </div>
+      </div>
+
+      {/* AI Assistant */}
+      <AIAssistant />
+    </DashboardLayout>
+  );
+}
