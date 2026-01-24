@@ -6,135 +6,90 @@ import { GuestFilters } from "@/components/guests/GuestFilters";
 import { GuestFormDialog } from "@/components/guests/GuestFormDialog";
 import { GuestDetailsDialog } from "@/components/guests/GuestDetailsDialog";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Download, Upload } from "lucide-react";
+import { UserPlus, Download, Upload, Loader2 } from "lucide-react";
 import { Guest, GuestStatus } from "@/types/guest";
+import { useGuests, useCreateGuest, useUpdateGuest, useDeleteGuest, DbGuest } from "@/hooks/useGuests";
+import { useReservations, ReservationWithDetails } from "@/hooks/useReservations";
+import { toast } from "sonner";
 
-// Mock data
-const mockGuests: Guest[] = [
-  {
-    id: "1",
-    name: "João Silva",
-    email: "joao.silva@email.com",
-    phone: "(11) 98765-4321",
-    document: "123.456.789-00",
-    room: "101",
-    checkIn: "2025-01-10",
-    checkOut: "2025-01-15",
-    status: "checked-in",
-    notes: "Preferência por quarto silencioso",
-    totalValue: 1500,
-    createdAt: "2025-01-08",
-  },
-  {
-    id: "2",
-    name: "Maria Santos",
-    email: "maria.santos@email.com",
-    phone: "(21) 99876-5432",
-    document: "987.654.321-00",
-    room: "205",
-    checkIn: "2025-01-12",
-    checkOut: "2025-01-14",
-    status: "checking-out",
-    notes: "Alérgica a amendoim",
-    totalValue: 800,
-    createdAt: "2025-01-10",
-  },
-  {
-    id: "3",
-    name: "Pedro Oliveira",
-    email: "pedro.oliveira@email.com",
-    phone: "(31) 97654-3210",
-    document: "456.789.123-00",
-    room: "302",
-    checkIn: "2025-01-14",
-    checkOut: "2025-01-18",
-    status: "reserved",
-    notes: "",
-    totalValue: 1200,
-    createdAt: "2025-01-11",
-  },
-  {
-    id: "4",
-    name: "Ana Costa",
-    email: "ana.costa@email.com",
-    phone: "(41) 96543-2109",
-    document: "789.123.456-00",
-    room: "108",
-    checkIn: "2025-01-08",
-    checkOut: "2025-01-16",
-    status: "checked-in",
-    notes: "VIP - Cliente frequente",
-    totalValue: 2400,
-    createdAt: "2025-01-06",
-  },
-  {
-    id: "5",
-    name: "Carlos Ferreira",
-    email: "carlos.ferreira@email.com",
-    phone: "(51) 95432-1098",
-    document: "321.654.987-00",
-    room: "110",
-    checkIn: "2025-01-05",
-    checkOut: "2025-01-10",
-    status: "checked-out",
-    notes: "",
-    totalValue: 1000,
-    createdAt: "2025-01-03",
-  },
-  {
-    id: "6",
-    name: "Fernanda Lima",
-    email: "fernanda.lima@email.com",
-    phone: "(61) 94321-0987",
-    document: "654.987.321-00",
-    room: "203",
-    checkIn: "2025-01-15",
-    checkOut: "2025-01-20",
-    status: "reserved",
-    notes: "Chegada prevista às 18h",
-    totalValue: 1500,
-    createdAt: "2025-01-12",
-  },
-  {
-    id: "7",
-    name: "Ricardo Souza",
-    email: "ricardo.souza@email.com",
-    phone: "(71) 93210-9876",
-    document: "147.258.369-00",
-    room: "305",
-    checkIn: "2025-01-11",
-    checkOut: "2025-01-13",
-    status: "checked-in",
-    notes: "",
-    totalValue: 600,
-    createdAt: "2025-01-09",
-  },
-  {
-    id: "8",
-    name: "Juliana Alves",
-    email: "juliana.alves@email.com",
-    phone: "(81) 92109-8765",
-    document: "258.369.147-00",
-    room: "",
-    checkIn: "2025-01-20",
-    checkOut: "2025-01-25",
-    status: "pending",
-    notes: "Aguardando confirmação de pagamento",
-    totalValue: 1500,
-    createdAt: "2025-01-13",
-  },
-];
+const ITEMS_PER_PAGE = 10;
 
-const ITEMS_PER_PAGE = 5;
+// Map DB guest to UI guest with reservation info
+const mapDbGuestToUi = (dbGuest: DbGuest, reservations: ReservationWithDetails[]): Guest => {
+  // Find active reservation for this guest
+  const activeReservation = reservations.find(
+    r => r.guest_id === dbGuest.id && 
+    (r.status === "checked_in" || r.status === "confirmed" || r.status === "pending")
+  );
+  
+  // Determine status based on reservations
+  let status: GuestStatus = "checked-out";
+  let room = "";
+  let checkIn = "";
+  let checkOut = "";
+  let totalValue = 0;
+
+  if (activeReservation) {
+    room = activeReservation.rooms?.number || "";
+    checkIn = activeReservation.check_in;
+    checkOut = activeReservation.check_out;
+    totalValue = Number(activeReservation.total_value);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const checkOutDate = new Date(activeReservation.check_out);
+    checkOutDate.setHours(0, 0, 0, 0);
+
+    if (activeReservation.status === "checked_in") {
+      if (checkOutDate.getTime() === today.getTime()) {
+        status = "checking-out";
+      } else {
+        status = "checked-in";
+      }
+    } else if (activeReservation.status === "confirmed") {
+      status = "reserved";
+    } else if (activeReservation.status === "pending") {
+      status = "pending";
+    }
+  }
+
+  return {
+    id: dbGuest.id,
+    name: dbGuest.name,
+    email: dbGuest.email,
+    phone: dbGuest.phone || "",
+    document: dbGuest.document,
+    room,
+    checkIn,
+    checkOut,
+    status,
+    notes: dbGuest.notes || "",
+    totalValue: totalValue || Number(dbGuest.total_spent),
+    createdAt: dbGuest.created_at.split("T")[0],
+  };
+};
 
 export default function Hospedes() {
-  const [guests, setGuests] = useState<Guest[]>(mockGuests);
+  const { data: dbGuests = [], isLoading: loadingGuests } = useGuests();
+  const { data: dbReservations = [], isLoading: loadingReservations } = useReservations();
+  
+  const createGuest = useCreateGuest();
+  const updateGuest = useUpdateGuest();
+  const deleteGuest = useDeleteGuest();
+
+  const guests = useMemo(
+    () => dbGuests.map(g => mapDbGuestToUi(g, dbReservations)),
+    [dbGuests, dbReservations]
+  );
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<GuestStatus | "all">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
   const [viewingGuest, setViewingGuest] = useState<Guest | null>(null);
+
+  const isLoading = loadingGuests || loadingReservations;
 
   // Filter and search guests
   const filteredGuests = useMemo(() => {
@@ -170,42 +125,59 @@ export default function Hospedes() {
   }, [guests]);
 
   const handleAddGuest = (guest: Omit<Guest, "id" | "createdAt">) => {
-    const newGuest: Guest = {
-      ...guest,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString().split("T")[0],
-    };
-    setGuests((prev) => [newGuest, ...prev]);
-    setIsFormOpen(false);
+    createGuest.mutate({
+      name: guest.name,
+      email: guest.email,
+      phone: guest.phone || null,
+      document: guest.document,
+      document_type: "cpf",
+      notes: guest.notes || null,
+    }, {
+      onSuccess: () => {
+        setIsFormOpen(false);
+      }
+    });
   };
 
   const handleEditGuest = (guest: Omit<Guest, "id" | "createdAt">) => {
     if (!editingGuest) return;
-    setGuests((prev) =>
-      prev.map((g) =>
-        g.id === editingGuest.id
-          ? { ...guest, id: editingGuest.id, createdAt: editingGuest.createdAt }
-          : g
-      )
-    );
-    setEditingGuest(null);
+    updateGuest.mutate({
+      id: editingGuest.id,
+      name: guest.name,
+      email: guest.email,
+      phone: guest.phone || null,
+      document: guest.document,
+      notes: guest.notes || null,
+    }, {
+      onSuccess: () => {
+        setEditingGuest(null);
+      }
+    });
   };
 
   const handleDeleteGuest = (id: string) => {
-    setGuests((prev) => prev.filter((g) => g.id !== id));
+    deleteGuest.mutate(id);
   };
 
   const handleCheckIn = (id: string) => {
-    setGuests((prev) =>
-      prev.map((g) => (g.id === id ? { ...g, status: "checked-in" as GuestStatus } : g))
-    );
+    // This would update the reservation status - for now just show toast
+    toast.info("Para realizar check-in, vá para a página de Reservas");
   };
 
   const handleCheckOut = (id: string) => {
-    setGuests((prev) =>
-      prev.map((g) => (g.id === id ? { ...g, status: "checked-out" as GuestStatus } : g))
-    );
+    // This would update the reservation status - for now just show toast
+    toast.info("Para realizar check-out, vá para a página de Reservas");
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
