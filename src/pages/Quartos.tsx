@@ -8,7 +8,7 @@ import { RoomFormDialog } from "@/components/rooms/RoomFormDialog";
 import { MaintenanceFormDialog } from "@/components/rooms/MaintenanceFormDialog";
 import { Button } from "@/components/ui/button";
 import { Room, RoomStatus, RoomType, MaintenanceLog } from "@/types/room";
-import { Plus, LayoutGrid, List } from "lucide-react";
+import { Plus, LayoutGrid, List, Loader2 } from "lucide-react";
 import { AIAssistant } from "@/components/dashboard/AIAssistant";
 import { toast } from "sonner";
 import {
@@ -22,64 +22,62 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { roomStatusConfig, roomTypeConfig } from "@/types/room";
 import { cn } from "@/lib/utils";
+import { 
+  useRooms, 
+  useCreateRoom, 
+  useUpdateRoom, 
+  useUpdateRoomStatus,
+  useCreateMaintenance,
+  DbRoom,
+  DbRoomStatus,
+  DbRoomType,
+} from "@/hooks/useRooms";
 
-// Mock data
-const initialRooms: Room[] = [
-  // 1º Andar
-  ...Array.from({ length: 10 }, (_, i) => ({
-    id: `room-${101 + i}`,
-    number: String(101 + i),
-    floor: 1,
-    type: (i < 6 ? "standard" : i < 8 ? "deluxe" : "suite") as RoomType,
-    status: (i < 4 ? "occupied" : i < 7 ? "available" : i < 9 ? "cleaning" : "maintenance") as RoomStatus,
-    capacity: i < 6 ? 2 : i < 8 ? 3 : 4,
-    pricePerNight: i < 6 ? 150 : i < 8 ? 250 : 400,
-    amenities: ["Wi-Fi", "TV", "Ar-condicionado", ...(i >= 6 ? ["Frigobar"] : []), ...(i >= 8 ? ["Banheira", "Varanda"] : [])],
-    currentGuest: i < 4 ? { id: `guest-${i}`, name: `Hóspede ${i + 1}`, checkIn: "10/01/2025", checkOut: "15/01/2025" } : undefined,
-    lastCleaning: "2025-01-13T14:30:00",
-    occupancyHistory: i < 4 ? [
-      { id: `hist-${i}-1`, guestName: "Cliente Anterior", checkIn: "05/01/2025", checkOut: "09/01/2025", totalDays: 4, totalValue: 600 },
-    ] : [],
-    maintenanceLogs: i === 9 ? [
-      { id: "log-1", date: "13/01/2025", type: "maintenance" as const, description: "Reparo no ar-condicionado", responsiblePerson: "Carlos", status: "in_progress" as const },
-    ] : [],
-  })),
-  // 2º Andar
-  ...Array.from({ length: 10 }, (_, i) => ({
-    id: `room-${201 + i}`,
-    number: String(201 + i),
-    floor: 2,
-    type: (i < 5 ? "standard" : i < 8 ? "deluxe" : "suite") as RoomType,
-    status: (i < 5 ? "occupied" : i < 8 ? "available" : "reserved") as RoomStatus,
-    capacity: i < 5 ? 2 : i < 8 ? 3 : 4,
-    pricePerNight: i < 5 ? 160 : i < 8 ? 280 : 450,
-    amenities: ["Wi-Fi", "TV", "Ar-condicionado", "Frigobar"],
-    currentGuest: i < 5 ? { id: `guest-2-${i}`, name: `Hóspede 2-${i + 1}`, checkIn: "12/01/2025", checkOut: "16/01/2025" } : undefined,
-    lastCleaning: "2025-01-13T10:00:00",
-    occupancyHistory: [],
-    maintenanceLogs: [],
-  })),
-  // 3º Andar - Master Suites
-  ...Array.from({ length: 5 }, (_, i) => ({
-    id: `room-${301 + i}`,
-    number: String(301 + i),
-    floor: 3,
-    type: (i < 3 ? "suite" : "master") as RoomType,
-    status: (i < 2 ? "occupied" : i < 4 ? "available" : "reserved") as RoomStatus,
-    capacity: i < 3 ? 4 : 6,
-    pricePerNight: i < 3 ? 500 : 800,
-    amenities: ["Wi-Fi", "TV", "Ar-condicionado", "Frigobar", "Cofre", "Banheira", "Varanda", "Vista Mar"],
-    currentGuest: i < 2 ? { id: `guest-3-${i}`, name: `VIP ${i + 1}`, checkIn: "11/01/2025", checkOut: "18/01/2025" } : undefined,
-    lastCleaning: "2025-01-13T08:00:00",
-    occupancyHistory: [
-      { id: `hist-3-${i}-1`, guestName: "Celebridade", checkIn: "01/01/2025", checkOut: "10/01/2025", totalDays: 9, totalValue: 7200 },
-    ],
-    maintenanceLogs: [],
-  })),
-];
+// Map DB types to UI types
+const mapDbRoomToUiRoom = (dbRoom: DbRoom): Room => ({
+  id: dbRoom.id,
+  number: dbRoom.number,
+  floor: dbRoom.floor,
+  type: mapDbTypeToUiType(dbRoom.type),
+  status: dbRoom.status as RoomStatus,
+  capacity: dbRoom.capacity,
+  pricePerNight: Number(dbRoom.price_per_night),
+  amenities: dbRoom.amenities || [],
+  notes: dbRoom.notes || undefined,
+  occupancyHistory: [],
+  maintenanceLogs: [],
+});
+
+const mapDbTypeToUiType = (dbType: DbRoomType): RoomType => {
+  const mapping: Record<DbRoomType, RoomType> = {
+    standard: "standard",
+    superior: "standard",
+    deluxe: "deluxe",
+    suite: "suite",
+    presidential: "master",
+  };
+  return mapping[dbType] || "standard";
+};
+
+const mapUiTypeToDbType = (uiType: RoomType): DbRoomType => {
+  const mapping: Record<RoomType, DbRoomType> = {
+    standard: "standard",
+    deluxe: "deluxe",
+    suite: "suite",
+    master: "presidential",
+  };
+  return mapping[uiType] || "standard";
+};
 
 export default function Quartos() {
-  const [rooms, setRooms] = useState<Room[]>(initialRooms);
+  const { data: dbRooms = [], isLoading, error } = useRooms();
+  const createRoom = useCreateRoom();
+  const updateRoom = useUpdateRoom();
+  const updateRoomStatus = useUpdateRoomStatus();
+  const createMaintenance = useCreateMaintenance();
+
+  const rooms = dbRooms.map(mapDbRoomToUiRoom);
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<RoomStatus | "all">("all");
   const [typeFilter, setTypeFilter] = useState<RoomType | "all">("all");
@@ -109,17 +107,15 @@ export default function Quartos() {
   };
 
   const handleStatusChange = (roomId: string, status: RoomStatus) => {
-    setRooms(prev => prev.map(room => 
-      room.id === roomId 
-        ? { 
-            ...room, 
-            status,
-            lastCleaning: status === "available" ? new Date().toISOString() : room.lastCleaning 
-          } 
-        : room
-    ));
-    setSelectedRoom(prev => prev?.id === roomId ? { ...prev, status } : prev);
-    toast.success(`Status do quarto atualizado para ${roomStatusConfig[status].label}`);
+    updateRoomStatus.mutate(
+      { id: roomId, status: status as DbRoomStatus },
+      {
+        onSuccess: () => {
+          setSelectedRoom(prev => prev?.id === roomId ? { ...prev, status } : prev);
+          toast.success(`Status do quarto atualizado para ${roomStatusConfig[status].label}`);
+        },
+      }
+    );
   };
 
   const handleAddMaintenance = (room: Room) => {
@@ -128,40 +124,39 @@ export default function Quartos() {
   };
 
   const handleMaintenanceSubmit = (roomId: string, log: MaintenanceLog) => {
-    setRooms(prev => prev.map(room => 
-      room.id === roomId 
-        ? { ...room, maintenanceLogs: [log, ...room.maintenanceLogs] } 
-        : room
-    ));
-    setSelectedRoom(prev => 
-      prev?.id === roomId 
-        ? { ...prev, maintenanceLogs: [log, ...prev.maintenanceLogs] } 
-        : prev
-    );
+    createMaintenance.mutate({
+      room_id: roomId,
+      type: log.type,
+      description: log.description,
+      status: log.status,
+      scheduled_date: log.date,
+    });
   };
 
   const handleRoomSubmit = (roomData: Partial<Room>) => {
     if (roomData.id) {
       // Edit existing room
-      setRooms(prev => prev.map(room => 
-        room.id === roomData.id ? { ...room, ...roomData } as Room : room
-      ));
+      updateRoom.mutate({
+        id: roomData.id,
+        number: roomData.number,
+        floor: roomData.floor,
+        type: mapUiTypeToDbType(roomData.type!),
+        capacity: roomData.capacity,
+        price_per_night: roomData.pricePerNight,
+        amenities: roomData.amenities,
+        notes: roomData.notes,
+      });
     } else {
       // Add new room
-      const newRoom: Room = {
-        id: `room-${Date.now()}`,
+      createRoom.mutate({
         number: roomData.number!,
         floor: roomData.floor!,
-        type: roomData.type!,
-        status: "available",
+        type: mapUiTypeToDbType(roomData.type!),
         capacity: roomData.capacity!,
-        pricePerNight: roomData.pricePerNight!,
+        price_per_night: roomData.pricePerNight!,
         amenities: roomData.amenities || [],
         notes: roomData.notes,
-        occupancyHistory: [],
-        maintenanceLogs: [],
-      };
-      setRooms(prev => [...prev, newRoom]);
+      });
     }
   };
 
@@ -169,6 +164,27 @@ export default function Quartos() {
     setEditingRoom(room);
     setFormDialogOpen(true);
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)] text-destructive">
+          <p>Erro ao carregar quartos</p>
+          <p className="text-sm text-muted-foreground">{error.message}</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

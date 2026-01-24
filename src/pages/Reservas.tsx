@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { ReservationStats } from "@/components/reservations/ReservationStats";
 import { ReservationCalendar } from "@/components/reservations/ReservationCalendar";
@@ -11,131 +11,68 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Reservation, ReservationStatus } from "@/types/reservation";
 import { Room, RoomType, RoomStatus } from "@/types/room";
-import { Plus, CalendarDays, List } from "lucide-react";
+import { Plus, CalendarDays, List, Loader2 } from "lucide-react";
 import { AIAssistant } from "@/components/dashboard/AIAssistant";
-import { toast } from "sonner";
-import { addDays, subDays } from "date-fns";
+import { useReservations, useCreateReservation, useUpdateReservation, useUpdateReservationStatus, ReservationWithDetails, DbReservationStatus } from "@/hooks/useReservations";
+import { useRooms, DbRoom, DbRoomType, DbRoomStatus } from "@/hooks/useRooms";
+import { useGuests, useCreateGuest, DbGuest } from "@/hooks/useGuests";
 
-// Mock rooms data (would come from shared state/API)
-const mockRooms: Room[] = [
-  ...Array.from({ length: 10 }, (_, i) => ({
-    id: `room-${101 + i}`,
-    number: String(101 + i),
-    floor: 1,
-    type: (i < 6 ? "standard" : i < 8 ? "deluxe" : "suite") as RoomType,
-    status: (i < 4 ? "occupied" : "available") as RoomStatus,
-    capacity: i < 6 ? 2 : i < 8 ? 3 : 4,
-    pricePerNight: i < 6 ? 150 : i < 8 ? 250 : 400,
-    amenities: ["Wi-Fi", "TV", "Ar-condicionado"],
+// Map DB reservation to UI reservation
+const mapDbReservationToUi = (dbRes: ReservationWithDetails): Reservation => ({
+  id: dbRes.id,
+  roomId: dbRes.room_id,
+  roomNumber: dbRes.rooms?.number || "",
+  guestName: dbRes.guests?.name || "",
+  guestEmail: dbRes.guests?.email || "",
+  guestPhone: dbRes.guests?.phone || "",
+  checkIn: new Date(dbRes.check_in),
+  checkOut: new Date(dbRes.check_out),
+  adults: dbRes.adults,
+  children: dbRes.children,
+  totalValue: Number(dbRes.total_value),
+  status: dbRes.status as ReservationStatus,
+  notes: dbRes.notes || undefined,
+  createdAt: new Date(dbRes.created_at),
+  confirmationCode: dbRes.confirmation_code,
+});
+
+// Map DB room to UI room
+const mapDbRoomToUi = (dbRoom: DbRoom): Room => {
+  const typeMapping: Record<DbRoomType, RoomType> = {
+    standard: "standard",
+    superior: "standard",
+    deluxe: "deluxe",
+    suite: "suite",
+    presidential: "master",
+  };
+
+  return {
+    id: dbRoom.id,
+    number: dbRoom.number,
+    floor: dbRoom.floor,
+    type: typeMapping[dbRoom.type] || "standard",
+    status: dbRoom.status as RoomStatus,
+    capacity: dbRoom.capacity,
+    pricePerNight: Number(dbRoom.price_per_night),
+    amenities: dbRoom.amenities || [],
     occupancyHistory: [],
     maintenanceLogs: [],
-  })),
-  ...Array.from({ length: 10 }, (_, i) => ({
-    id: `room-${201 + i}`,
-    number: String(201 + i),
-    floor: 2,
-    type: (i < 5 ? "standard" : i < 8 ? "deluxe" : "suite") as RoomType,
-    status: "available" as RoomStatus,
-    capacity: i < 5 ? 2 : i < 8 ? 3 : 4,
-    pricePerNight: i < 5 ? 160 : i < 8 ? 280 : 450,
-    amenities: ["Wi-Fi", "TV", "Ar-condicionado", "Frigobar"],
-    occupancyHistory: [],
-    maintenanceLogs: [],
-  })),
-];
-
-// Mock reservations
-const generateConfirmationCode = () => {
-  return `RES${Date.now().toString(36).toUpperCase()}`;
+  };
 };
 
-const initialReservations: Reservation[] = [
-  {
-    id: "res-1",
-    roomId: "room-101",
-    roomNumber: "101",
-    guestName: "João Silva",
-    guestEmail: "joao@email.com",
-    guestPhone: "(11) 99999-0001",
-    checkIn: new Date(),
-    checkOut: addDays(new Date(), 3),
-    adults: 2,
-    children: 0,
-    totalValue: 450,
-    status: "checked_in",
-    confirmationCode: "RES001ABC",
-    createdAt: subDays(new Date(), 7),
-  },
-  {
-    id: "res-2",
-    roomId: "room-102",
-    roomNumber: "102",
-    guestName: "Maria Santos",
-    guestEmail: "maria@email.com",
-    guestPhone: "(11) 99999-0002",
-    checkIn: addDays(new Date(), 1),
-    checkOut: addDays(new Date(), 5),
-    adults: 2,
-    children: 1,
-    totalValue: 600,
-    status: "confirmed",
-    confirmationCode: "RES002DEF",
-    createdAt: subDays(new Date(), 3),
-  },
-  {
-    id: "res-3",
-    roomId: "room-107",
-    roomNumber: "107",
-    guestName: "Carlos Oliveira",
-    guestEmail: "carlos@email.com",
-    guestPhone: "(11) 99999-0003",
-    checkIn: addDays(new Date(), 2),
-    checkOut: addDays(new Date(), 4),
-    adults: 3,
-    children: 0,
-    totalValue: 500,
-    status: "pending",
-    confirmationCode: "RES003GHI",
-    createdAt: subDays(new Date(), 1),
-  },
-  {
-    id: "res-4",
-    roomId: "room-109",
-    roomNumber: "109",
-    guestName: "Ana Costa",
-    guestEmail: "ana@email.com",
-    guestPhone: "(11) 99999-0004",
-    checkIn: addDays(new Date(), 5),
-    checkOut: addDays(new Date(), 10),
-    adults: 2,
-    children: 2,
-    totalValue: 2000,
-    status: "confirmed",
-    notes: "Preferência por andar alto, lua de mel",
-    confirmationCode: "RES004JKL",
-    createdAt: subDays(new Date(), 5),
-  },
-  {
-    id: "res-5",
-    roomId: "room-201",
-    roomNumber: "201",
-    guestName: "Pedro Almeida",
-    guestEmail: "pedro@email.com",
-    guestPhone: "(11) 99999-0005",
-    checkIn: subDays(new Date(), 5),
-    checkOut: subDays(new Date(), 2),
-    adults: 1,
-    children: 0,
-    totalValue: 480,
-    status: "checked_out",
-    confirmationCode: "RES005MNO",
-    createdAt: subDays(new Date(), 10),
-  },
-];
-
 export default function Reservas() {
-  const [reservations, setReservations] = useState<Reservation[]>(initialReservations);
-  const [rooms] = useState<Room[]>(mockRooms);
+  const { data: dbReservations = [], isLoading: loadingReservations } = useReservations();
+  const { data: dbRooms = [], isLoading: loadingRooms } = useRooms();
+  const { data: dbGuests = [], isLoading: loadingGuests } = useGuests();
+  
+  const createReservation = useCreateReservation();
+  const updateReservation = useUpdateReservation();
+  const updateReservationStatus = useUpdateReservationStatus();
+  const createGuest = useCreateGuest();
+
+  const reservations = useMemo(() => dbReservations.map(mapDbReservationToUi), [dbReservations]);
+  const rooms = useMemo(() => dbRooms.map(mapDbRoomToUi), [dbRooms]);
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ReservationStatus | "all">("all");
   const [activeTab, setActiveTab] = useState("calendar");
@@ -146,6 +83,8 @@ export default function Reservas() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
   const [preselectedRoomId, setPreselectedRoomId] = useState<string | null>(null);
+
+  const isLoading = loadingReservations || loadingRooms || loadingGuests;
 
   // Filter reservations
   const filteredReservations = reservations.filter(res => {
@@ -180,42 +119,84 @@ export default function Reservas() {
     setFormDialogOpen(true);
   };
 
-  const handleReservationSubmit = (data: Partial<Reservation>) => {
+  const handleReservationSubmit = async (data: Partial<Reservation>) => {
+    // Find or create guest
+    let guestId = dbReservations.find(r => r.id === data.id)?.guest_id;
+    
+    if (!guestId) {
+      // Check if guest exists by email
+      const existingGuest = dbGuests.find(g => g.email === data.guestEmail);
+      if (existingGuest) {
+        guestId = existingGuest.id;
+      } else {
+        // Create new guest
+        try {
+          const newGuest = await createGuest.mutateAsync({
+            name: data.guestName!,
+            email: data.guestEmail!,
+            phone: data.guestPhone || null,
+            document: "000.000.000-00", // Placeholder - should be collected in form
+            document_type: "cpf",
+          });
+          guestId = newGuest.id;
+        } catch (error) {
+          console.error("Error creating guest:", error);
+          return;
+        }
+      }
+    }
+
     if (data.id) {
       // Update existing
-      setReservations(prev => prev.map(res => 
-        res.id === data.id ? { ...res, ...data } as Reservation : res
-      ));
+      updateReservation.mutate({
+        id: data.id,
+        room_id: data.roomId,
+        check_in: data.checkIn?.toISOString().split("T")[0],
+        check_out: data.checkOut?.toISOString().split("T")[0],
+        adults: data.adults,
+        children: data.children,
+        total_value: data.totalValue,
+        notes: data.notes,
+      });
     } else {
       // Create new
-      const newReservation: Reservation = {
-        ...data,
-        id: `res-${Date.now()}`,
-        confirmationCode: generateConfirmationCode(),
-        createdAt: new Date(),
-      } as Reservation;
-      setReservations(prev => [...prev, newReservation]);
+      createReservation.mutate({
+        room_id: data.roomId!,
+        guest_id: guestId!,
+        check_in: data.checkIn!.toISOString().split("T")[0],
+        check_out: data.checkOut!.toISOString().split("T")[0],
+        adults: data.adults || 1,
+        children: data.children || 0,
+        total_value: data.totalValue!,
+        notes: data.notes,
+        status: "pending",
+      });
     }
     setPreselectedRoomId(null);
   };
 
   const handleStatusChange = (id: string, status: ReservationStatus) => {
-    setReservations(prev => prev.map(res => 
-      res.id === id ? { ...res, status } : res
-    ));
-    setSelectedReservation(prev => 
-      prev?.id === id ? { ...prev, status } : prev
+    updateReservationStatus.mutate(
+      { id, status: status as DbReservationStatus },
+      {
+        onSuccess: () => {
+          setSelectedReservation(prev => 
+            prev?.id === id ? { ...prev, status } : prev
+          );
+        },
+      }
     );
-    
-    const statusMessages: Record<ReservationStatus, string> = {
-      pending: "Reserva marcada como pendente",
-      confirmed: "Reserva confirmada com sucesso!",
-      checked_in: "Check-in realizado com sucesso!",
-      checked_out: "Check-out realizado com sucesso!",
-      cancelled: "Reserva cancelada",
-    };
-    toast.success(statusMessages[status]);
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
