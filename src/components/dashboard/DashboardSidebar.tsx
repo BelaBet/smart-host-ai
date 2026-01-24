@@ -13,6 +13,7 @@ import {
   Hotel,
   ChevronLeft,
   ChevronRight,
+  CalendarDays,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Users, label: "Hóspedes", path: "/dashboard/hospedes" },
   { icon: Bed, label: "Quartos", path: "/dashboard/quartos" },
+  { icon: CalendarDays, label: "Reservas", path: "/dashboard/reservas" },
   { icon: DollarSign, label: "Caixa", path: "/dashboard/caixa" },
   { icon: UtensilsCrossed, label: "Restaurante", path: "/dashboard/restaurante" },
   { icon: Bot, label: "Assistente IA", path: "/dashboard/assistente" },
