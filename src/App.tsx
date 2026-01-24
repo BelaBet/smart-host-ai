@@ -3,7 +3,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
+import Login from "./pages/Login";
+import Checkout from "./pages/Checkout";
 import Dashboard from "./pages/Dashboard";
 import Hospedes from "./pages/Hospedes";
 import Quartos from "./pages/Quartos";
@@ -17,24 +21,28 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/dashboard/hospedes" element={<Hospedes />} />
-          <Route path="/dashboard/quartos" element={<Quartos />} />
-          <Route path="/dashboard/caixa" element={<Caixa />} />
-          <Route path="/dashboard/restaurante" element={<Restaurante />} />
-          <Route path="/dashboard/relatorios" element={<Relatorios />} />
-          <Route path="/dashboard/reservas" element={<Reservas />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/dashboard/hospedes" element={<ProtectedRoute><Hospedes /></ProtectedRoute>} />
+            <Route path="/dashboard/quartos" element={<ProtectedRoute><Quartos /></ProtectedRoute>} />
+            <Route path="/dashboard/caixa" element={<ProtectedRoute><Caixa /></ProtectedRoute>} />
+            <Route path="/dashboard/restaurante" element={<ProtectedRoute><Restaurante /></ProtectedRoute>} />
+            <Route path="/dashboard/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
+            <Route path="/dashboard/reservas" element={<ProtectedRoute><Reservas /></ProtectedRoute>} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

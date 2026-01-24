@@ -32,7 +32,7 @@ export function CTA() {
           </p>
 
           <div className="flex flex-wrap justify-center gap-4">
-            <Link to="/dashboard">
+            <Link to="/login">
               <Button variant="hero" size="xl" className="gap-2">
                 Começar Teste Gratuito
                 <ArrowRight className="w-5 h-5" />
@@ -44,7 +44,7 @@ export function CTA() {
           </div>
 
           <p className="text-primary-foreground/60 text-sm mt-6">
-            14 dias grátis • Sem cartão de crédito • Cancele quando quiser
+            7 dias grátis • Cartão necessário para iniciar trial • Cancele quando quiser
           </p>
         </div>
       </div>

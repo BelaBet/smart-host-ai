@@ -38,7 +38,7 @@ export function Navbar() {
             <Link to="/login">
               <Button variant="ghost">Entrar</Button>
             </Link>
-            <Link to="/dashboard">
+            <Link to="/login">
               <Button variant="hero" className="gap-2">
                 <Sparkles className="w-4 h-4" />
                 Começar Grátis
@@ -72,7 +72,7 @@ export function Navbar() {
                 <Link to="/login">
                   <Button variant="ghost" className="w-full">Entrar</Button>
                 </Link>
-                <Link to="/dashboard">
+                <Link to="/login">
                   <Button variant="hero" className="w-full gap-2">
                     <Sparkles className="w-4 h-4" />
                     Começar Grátis
