@@ -43,6 +43,23 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
+    // Whitelist de emails com acesso completo
+    const whitelistedEmails = ["r.2019uk@gmail.com"];
+    if (whitelistedEmails.includes(user.email.toLowerCase())) {
+      logStep("Whitelisted email, granting full access", { email: user.email });
+      return new Response(JSON.stringify({
+        subscribed: true,
+        has_trial: false,
+        trial_end: null,
+        subscription_end: null,
+        product_id: "whitelisted",
+        status: "active"
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     
