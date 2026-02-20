@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Building2, Loader2, Eye, EyeOff } from "lucide-react";
+import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -169,6 +170,8 @@ export default function Login() {
                     "Entrar"
                   )}
                 </Button>
+
+                <ForgotPasswordDialog />
               </form>
             </TabsContent>
             

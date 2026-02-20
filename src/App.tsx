@@ -15,6 +15,7 @@ import Caixa from "./pages/Caixa";
 import Restaurante from "./pages/Restaurante";
 import Relatorios from "./pages/Relatorios";
 import Reservas from "./pages/Reservas";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/checkout" element={<Checkout />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/dashboard/hospedes" element={<ProtectedRoute><Hospedes /></ProtectedRoute>} />
             <Route path="/dashboard/quartos" element={<ProtectedRoute><Quartos /></ProtectedRoute>} />
