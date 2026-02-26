@@ -44,7 +44,7 @@ serve(async (req) => {
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     // Whitelist de emails com acesso completo
-    const whitelistedEmails = ["r.2019uk@gmail.com"];
+    const whitelistedEmails = ["r.2019uk@gmail.com", "ankortechsolucoes@gmail.com"];
     if (whitelistedEmails.includes(user.email.toLowerCase())) {
       logStep("Whitelisted email, granting full access", { email: user.email });
       return new Response(JSON.stringify({
