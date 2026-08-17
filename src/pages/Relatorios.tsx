@@ -144,7 +144,7 @@ export default function Relatorios() {
             </TabsList>
 
             <Select value={chartType} onValueChange={(v) => setChartType(v as 'bar' | 'line' | 'area')}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-full sm:w-[150px]">
                 <SelectValue placeholder="Tipo de gráfico" />
               </SelectTrigger>
               <SelectContent>
