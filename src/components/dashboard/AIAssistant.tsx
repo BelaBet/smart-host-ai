@@ -100,7 +100,7 @@ export function AIAssistant() {
       {!isMinimized && (
         <>
           {/* Messages */}
-          <div className="flex-1 p-4 space-y-4 h-[360px] overflow-y-auto">
+          <div className="flex-1 p-4 space-y-4 h-[calc(100%-9rem)] overflow-y-auto">
             {messages.map((message) => (
               <div
                 key={message.id}
