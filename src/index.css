@@ -108,6 +108,10 @@
     @apply border-border;
   }
 
+  html, body {
+    @apply max-w-full overflow-x-hidden;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', sans-serif;
@@ -115,6 +119,16 @@
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Playfair Display', serif;
+    overflow-wrap: break-word;
+  }
+
+  /* Long words / URLs should never push the layout wider */
+  p, span, a, li, td, th, label {
+    overflow-wrap: break-word;
+  }
+
+  img, svg, video, canvas {
+    max-width: 100%;
   }
 }
 
