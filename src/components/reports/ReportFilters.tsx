@@ -68,7 +68,7 @@ export function ReportFilters({
           </div>
           
           <Select value={preset} onValueChange={handlePresetChange}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Selecione o período" />
             </SelectTrigger>
             <SelectContent>
@@ -87,7 +87,7 @@ export function ReportFilters({
                 <Button
                   variant="outline"
                   className={cn(
-                    "w-[140px] justify-start text-left font-normal",
+                    "w-full sm:w-[140px] justify-start text-left font-normal",
                     !startDate && "text-muted-foreground"
                   )}
                 >
@@ -113,7 +113,7 @@ export function ReportFilters({
                 <Button
                   variant="outline"
                   className={cn(
-                    "w-[140px] justify-start text-left font-normal",
+                    "w-full sm:w-[140px] justify-start text-left font-normal",
                     !endDate && "text-muted-foreground"
                   )}
                 >

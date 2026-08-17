@@ -42,7 +42,7 @@ export function OccupancyChart({ data }: OccupancyChartProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
           <div className="text-center p-3 bg-success/10 rounded-lg">
             <p className="text-lg font-bold text-success">{maxOccupancy.toFixed(1)}%</p>
             <p className="text-xs text-muted-foreground">Máxima</p>

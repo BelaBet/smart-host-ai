@@ -361,7 +361,7 @@ export default function Restaurante() {
           <TabsContent value="orders" className="space-y-4">
             <div className="flex items-center gap-4">
               <Select value={orderStatusFilter} onValueChange={setOrderStatusFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue />
                 </SelectTrigger>
@@ -406,7 +406,7 @@ export default function Restaurante() {
                 />
               </div>
               <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as MenuCategory | "all")}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
                 <SelectContent>
