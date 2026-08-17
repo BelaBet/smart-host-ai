@@ -48,7 +48,7 @@ export function AIAssistant() {
     return (
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full gradient-gold shadow-gold animate-pulse-glow z-50"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-14 h-14 rounded-full gradient-gold shadow-gold animate-pulse-glow z-50"
         size="icon"
       >
         <Bot className="w-6 h-6 text-primary" />
@@ -59,13 +59,13 @@ export function AIAssistant() {
   return (
     <div
       className={cn(
-        "fixed bottom-6 right-6 bg-card rounded-2xl shadow-2xl border border-border overflow-hidden transition-all duration-300 z-50",
-        isMinimized ? "w-80 h-16" : "w-96 h-[500px]"
+        "fixed bottom-4 right-4 left-4 sm:left-auto sm:bottom-6 sm:right-6 bg-card rounded-2xl shadow-2xl border border-border overflow-hidden transition-all duration-300 z-50 max-w-[calc(100vw-2rem)]",
+        isMinimized ? "sm:w-80 h-16" : "sm:w-96 h-[70dvh] max-h-[500px]"
       )}
     >
       {/* Header */}
-      <div className="gradient-primary p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="gradient-primary p-4 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3 min-w-0">
           <div className="w-8 h-8 gradient-gold rounded-lg flex items-center justify-center">
             <Bot className="w-5 h-5 text-primary" />
           </div>
