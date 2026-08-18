@@ -15,6 +15,7 @@ import Caixa from "./pages/Caixa";
 import Restaurante from "./pages/Restaurante";
 import Relatorios from "./pages/Relatorios";
 import Reservas from "./pages/Reservas";
+import Auditoria from "./pages/Auditoria";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/dashboard/restaurante" element={<ProtectedRoute><Restaurante /></ProtectedRoute>} />
             <Route path="/dashboard/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
             <Route path="/dashboard/reservas" element={<ProtectedRoute><Reservas /></ProtectedRoute>} />
+            <Route path="/dashboard/auditoria" element={<ProtectedRoute><Auditoria /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
