@@ -14,6 +14,150 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          id: string
+          metadata: Json
+          new_data: Json | null
+          occurred_at: string
+          old_data: Json | null
+          record_id: string
+          table_name: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          id?: string
+          metadata?: Json
+          new_data?: Json | null
+          occurred_at?: string
+          old_data?: Json | null
+          record_id: string
+          table_name: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          id?: string
+          metadata?: Json
+          new_data?: Json | null
+          occurred_at?: string
+          old_data?: Json | null
+          record_id?: string
+          table_name?: string
+        }
+        Relationships: []
+      }
+      cashier_sessions: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          closing_balance: number | null
+          created_at: string
+          difference: number | null
+          expected_balance: number | null
+          id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string
+          opening_balance: number
+          status: Database["public"]["Enums"]["cashier_session_status"]
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_balance?: number | null
+          created_at?: string
+          difference?: number | null
+          expected_balance?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by: string
+          opening_balance?: number
+          status?: Database["public"]["Enums"]["cashier_session_status"]
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_balance?: number | null
+          created_at?: string
+          difference?: number | null
+          expected_balance?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string
+          opening_balance?: number
+          status?: Database["public"]["Enums"]["cashier_session_status"]
+        }
+        Relationships: []
+      }
+      cashier_transactions: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string
+          guest_id: string | null
+          id: string
+          payment_method: string
+          room_number: string | null
+          session_id: string
+          type: Database["public"]["Enums"]["cashier_transaction_type"]
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          created_by: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description: string
+          guest_id?: string | null
+          id?: string
+          payment_method: string
+          room_number?: string | null
+          session_id: string
+          type: Database["public"]["Enums"]["cashier_transaction_type"]
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string
+          guest_id?: string | null
+          id?: string
+          payment_method?: string
+          room_number?: string | null
+          session_id?: string
+          type?: Database["public"]["Enums"]["cashier_transaction_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cashier_transactions_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashier_transactions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cashier_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guests: {
         Row: {
           address: string | null
@@ -229,14 +373,107 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      close_cashier: {
+        Args: {
+          p_closing_balance: number
+          p_notes?: string
+          p_session_id: string
+        }
+        Returns: {
+          closed_at: string | null
+          closed_by: string | null
+          closing_balance: number | null
+          created_at: string
+          difference: number | null
+          expected_balance: number | null
+          id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string
+          opening_balance: number
+          status: Database["public"]["Enums"]["cashier_session_status"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cashier_sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      has_any_role: {
+        Args: {
+          _roles: Database["public"]["Enums"]["app_role"][]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      open_cashier: {
+        Args: { p_opening_balance: number }
+        Returns: {
+          closed_at: string | null
+          closed_by: string | null
+          closing_balance: number | null
+          created_at: string
+          difference: number | null
+          expected_balance: number | null
+          id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string
+          opening_balance: number
+          status: Database["public"]["Enums"]["cashier_session_status"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cashier_sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
+      app_role:
+        | "super_admin"
+        | "admin"
+        | "gerente"
+        | "recepcao"
+        | "caixa"
+        | "governanca"
+      cashier_session_status: "open" | "closed"
+      cashier_transaction_type: "income" | "expense"
       reservation_status:
         | "pending"
         | "confirmed"
@@ -377,6 +614,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: [
+        "super_admin",
+        "admin",
+        "gerente",
+        "recepcao",
+        "caixa",
+        "governanca",
+      ],
+      cashier_session_status: ["open", "closed"],
+      cashier_transaction_type: ["income", "expense"],
       reservation_status: [
         "pending",
         "confirmed",
