@@ -8,12 +8,13 @@ export default function SuperAdmin() {
   const [stats, setStats] = useState({ orgs: 0, users: 0, active: 0, subscriptions: 0 });
   const [organizations, setOrganizations] = useState<any[]>([]);
   useEffect(() => { (async () => {
+    const db = supabase as any;
     const [{ count: orgs }, { count: users }, { count: active }, { count: subscriptions }, { data }] = await Promise.all([
-      supabase.from('organizations').select('*', { count: 'exact', head: true }),
-      supabase.from('organization_members').select('*', { count: 'exact', head: true }),
-      supabase.from('organizations').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-      supabase.from('organization_subscriptions').select('*', { count: 'exact', head: true }).in('status', ['trial','active']),
-      supabase.from('organizations').select('id,name,slug,status,created_at').order('created_at', { ascending: false }).limit(50),
+      db.from('organizations').select('*', { count: 'exact', head: true }),
+      db.from('organization_members').select('*', { count: 'exact', head: true }),
+      db.from('organizations').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+      db.from('organization_subscriptions').select('*', { count: 'exact', head: true }).in('status', ['trial','active']),
+      db.from('organizations').select('id,name,slug,status,created_at').order('created_at', { ascending: false }).limit(50),
     ]);
     setStats({ orgs: orgs ?? 0, users: users ?? 0, active: active ?? 0, subscriptions: subscriptions ?? 0 });
     setOrganizations(data ?? []);
