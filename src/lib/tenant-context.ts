@@ -16,12 +16,69 @@ export async function getTenantContext(force = false): Promise<TenantContext | n
     .from('organization_members')
     .select('organization_id, role')
     .eq('user_id', user.id)
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .order('created_at', { ascending: true });
 
   if (error) throw error;
-  cached = data ? { organizationId: data.organization_id, role: data.role } : null;
+  if (!data?.length) return null;
+
+  const { data: active } = await supabase
+    .from('user_active_organization')
+    .select('organization_id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  const selected = active?.organization_id && data.some(m => m.organization_id === active.organization_id)
+    ? active.organization_id
+    : data[0].organization_id;
+
+  const membership = data.find(m => m.organization_id === selected) ?? data[0];
+  cached = { organizationId: membership.organization_id, role: membership.role };
+
+  if (!active || active.organization_id !== selected) {
+    await supabase.from('user_active_organization').upsert({
+      user_id: user.id,
+      organization_id: selected,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  return cached;
+}
+
+export async function getMyOrganizations() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data, error } = await supabase
+    .from('organization_members')
+    .select('organization_id, role, organizations(id, name, slug, status)')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function switchOrganization(organizationId: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuário não autenticado.');
+
+  const { data: membership, error: membershipError } = await supabase
+    .from('organization_members')
+    .select('organization_id, role')
+    .eq('user_id', user.id)
+    .eq('organization_id', organizationId)
+    .maybeSingle();
+
+  if (membershipError) throw membershipError;
+  if (!membership) throw new Error('Você não pertence a esta organização.');
+
+  const { error } = await supabase.from('user_active_organization').upsert({
+    user_id: user.id,
+    organization_id: organizationId,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+
+  cached = { organizationId: membership.organization_id, role: membership.role };
   return cached;
 }
 
