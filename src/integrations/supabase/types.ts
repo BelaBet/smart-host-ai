@@ -63,6 +63,7 @@ export type Database = {
           opened_at: string
           opened_by: string
           opening_balance: number
+          organization_id: string | null
           status: Database["public"]["Enums"]["cashier_session_status"]
         }
         Insert: {
@@ -77,6 +78,7 @@ export type Database = {
           opened_at?: string
           opened_by: string
           opening_balance?: number
+          organization_id?: string | null
           status?: Database["public"]["Enums"]["cashier_session_status"]
         }
         Update: {
@@ -91,9 +93,18 @@ export type Database = {
           opened_at?: string
           opened_by?: string
           opening_balance?: number
+          organization_id?: string | null
           status?: Database["public"]["Enums"]["cashier_session_status"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cashier_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cashier_transactions: {
         Row: {
@@ -106,6 +117,7 @@ export type Database = {
           description: string
           guest_id: string | null
           id: string
+          organization_id: string | null
           payment_method: string
           room_number: string | null
           session_id: string
@@ -121,6 +133,7 @@ export type Database = {
           description: string
           guest_id?: string | null
           id?: string
+          organization_id?: string | null
           payment_method: string
           room_number?: string | null
           session_id: string
@@ -136,6 +149,7 @@ export type Database = {
           description?: string
           guest_id?: string | null
           id?: string
+          organization_id?: string | null
           payment_method?: string
           room_number?: string | null
           session_id?: string
@@ -147,6 +161,13 @@ export type Database = {
             columns: ["guest_id"]
             isOneToOne: false
             referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashier_transactions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
@@ -170,6 +191,7 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          organization_id: string | null
           phone: string | null
           state: string | null
           total_spent: number
@@ -187,6 +209,7 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          organization_id?: string | null
           phone?: string | null
           state?: string | null
           total_spent?: number
@@ -204,10 +227,305 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          organization_id?: string | null
           phone?: string | null
           state?: string | null
           total_spent?: number
           total_stays?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_branding: {
+        Row: {
+          accent_color: string
+          custom_css: string | null
+          display_name: string
+          favicon_url: string | null
+          font_family: string
+          login_subtitle: string | null
+          login_title: string | null
+          logo_url: string | null
+          organization_id: string
+          primary_color: string
+          secondary_color: string
+          support_email: string | null
+          support_phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          custom_css?: string | null
+          display_name: string
+          favicon_url?: string | null
+          font_family?: string
+          login_subtitle?: string | null
+          login_title?: string | null
+          logo_url?: string | null
+          organization_id: string
+          primary_color?: string
+          secondary_color?: string
+          support_email?: string | null
+          support_phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          custom_css?: string | null
+          display_name?: string
+          favicon_url?: string | null
+          font_family?: string
+          login_subtitle?: string | null
+          login_title?: string | null
+          logo_url?: string | null
+          organization_id?: string
+          primary_color?: string
+          secondary_color?: string
+          support_email?: string | null
+          support_phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_branding_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_domains: {
+        Row: {
+          created_at: string
+          hostname: string
+          id: string
+          is_primary: boolean
+          organization_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          hostname: string
+          id?: string
+          is_primary?: boolean
+          organization_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          hostname?: string
+          id?: string
+          is_primary?: boolean
+          organization_id?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_domains_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_members: {
+        Row: {
+          created_at: string
+          organization_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          organization_id: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          organization_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_settings: {
+        Row: {
+          currency: string
+          features: Json
+          locale: string
+          organization_id: string
+          settings: Json
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          currency?: string
+          features?: Json
+          locale?: string
+          organization_id: string
+          settings?: Json
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          currency?: string
+          features?: Json
+          locale?: string
+          organization_id?: string
+          settings?: Json
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_subscriptions: {
+        Row: {
+          billing_cycle: string
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          external_customer_id: string | null
+          external_subscription_id: string | null
+          organization_id: string
+          plan_id: string
+          status: string
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          billing_cycle?: string
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          external_customer_id?: string | null
+          external_subscription_id?: string | null
+          organization_id: string
+          plan_id: string
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          billing_cycle?: string
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          external_customer_id?: string | null
+          external_subscription_id?: string | null
+          organization_id?: string
+          plan_id?: string
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "saas_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_usage: {
+        Row: {
+          organization_id: string
+          period_end: string | null
+          period_start: string | null
+          reservations_count: number
+          rooms_count: number
+          storage_bytes: number
+          updated_at: string
+          users_count: number
+        }
+        Insert: {
+          organization_id: string
+          period_end?: string | null
+          period_start?: string | null
+          reservations_count?: number
+          rooms_count?: number
+          storage_bytes?: number
+          updated_at?: string
+          users_count?: number
+        }
+        Update: {
+          organization_id?: string
+          period_end?: string | null
+          period_start?: string | null
+          reservations_count?: number
+          rooms_count?: number
+          storage_bytes?: number
+          updated_at?: string
+          users_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_usage_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+          status?: string
           updated_at?: string
         }
         Relationships: []
@@ -223,6 +541,7 @@ export type Database = {
           guest_id: string
           id: string
           notes: string | null
+          organization_id: string | null
           payment_method: string | null
           payment_status: string | null
           room_id: string
@@ -241,6 +560,7 @@ export type Database = {
           guest_id: string
           id?: string
           notes?: string | null
+          organization_id?: string | null
           payment_method?: string | null
           payment_status?: string | null
           room_id: string
@@ -259,6 +579,7 @@ export type Database = {
           guest_id?: string
           id?: string
           notes?: string | null
+          organization_id?: string | null
           payment_method?: string | null
           payment_status?: string | null
           room_id?: string
@@ -273,6 +594,13 @@ export type Database = {
             columns: ["guest_id"]
             isOneToOne: false
             referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
@@ -292,6 +620,7 @@ export type Database = {
           description: string
           id: string
           notes: string | null
+          organization_id: string | null
           room_id: string
           scheduled_date: string | null
           status: string
@@ -304,6 +633,7 @@ export type Database = {
           description: string
           id?: string
           notes?: string | null
+          organization_id?: string | null
           room_id: string
           scheduled_date?: string | null
           status?: string
@@ -316,12 +646,20 @@ export type Database = {
           description?: string
           id?: string
           notes?: string | null
+          organization_id?: string | null
           room_id?: string
           scheduled_date?: string | null
           status?: string
           type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "room_maintenance_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "room_maintenance_room_id_fkey"
             columns: ["room_id"]
@@ -340,6 +678,7 @@ export type Database = {
           id: string
           notes: string | null
           number: string
+          organization_id: string | null
           price_per_night: number
           status: Database["public"]["Enums"]["room_status"]
           type: Database["public"]["Enums"]["room_type"]
@@ -353,6 +692,7 @@ export type Database = {
           id?: string
           notes?: string | null
           number: string
+          organization_id?: string | null
           price_per_night?: number
           status?: Database["public"]["Enums"]["room_status"]
           type?: Database["public"]["Enums"]["room_type"]
@@ -366,10 +706,58 @@ export type Database = {
           id?: string
           notes?: string | null
           number?: string
+          organization_id?: string | null
           price_per_night?: number
           status?: Database["public"]["Enums"]["room_status"]
           type?: Database["public"]["Enums"]["room_type"]
           updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saas_plans: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          features: Json
+          id: string
+          max_rooms: number | null
+          max_users: number | null
+          name: string
+          price_monthly: number
+          price_yearly: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          features?: Json
+          id?: string
+          max_rooms?: number | null
+          max_users?: number | null
+          name: string
+          price_monthly?: number
+          price_yearly?: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          features?: Json
+          id?: string
+          max_rooms?: number | null
+          max_users?: number | null
+          name?: string
+          price_monthly?: number
+          price_yearly?: number
         }
         Relationships: []
       }
@@ -417,6 +805,7 @@ export type Database = {
           opened_at: string
           opened_by: string
           opening_balance: number
+          organization_id: string | null
           status: Database["public"]["Enums"]["cashier_session_status"]
         }
         SetofOptions: {
@@ -454,6 +843,7 @@ export type Database = {
           opened_at: string
           opened_by: string
           opening_balance: number
+          organization_id: string | null
           status: Database["public"]["Enums"]["cashier_session_status"]
         }
         SetofOptions: {
