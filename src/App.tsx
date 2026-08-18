@@ -16,38 +16,15 @@ import Restaurante from "./pages/Restaurante";
 import Relatorios from "./pages/Relatorios";
 import Reservas from "./pages/Reservas";
 import Auditoria from "./pages/Auditoria";
+import SuperAdmin from "./pages/SuperAdmin";
+import Onboarding from "./pages/Onboarding";
+import Assinatura from "./pages/Assinatura";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/dashboard/hospedes" element={<ProtectedRoute><Hospedes /></ProtectedRoute>} />
-            <Route path="/dashboard/quartos" element={<ProtectedRoute><Quartos /></ProtectedRoute>} />
-            <Route path="/dashboard/caixa" element={<ProtectedRoute><Caixa /></ProtectedRoute>} />
-            <Route path="/dashboard/restaurante" element={<ProtectedRoute><Restaurante /></ProtectedRoute>} />
-            <Route path="/dashboard/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
-            <Route path="/dashboard/reservas" element={<ProtectedRoute><Reservas /></ProtectedRoute>} />
-            <Route path="/dashboard/auditoria" element={<ProtectedRoute><Auditoria /></ProtectedRoute>} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
-
+const App = () => <QueryClientProvider client={queryClient}><AuthProvider><TooltipProvider><Toaster/><Sonner/><BrowserRouter><Routes>
+<Route path="/" element={<Index/>}/><Route path="/login" element={<Login/>}/><Route path="/checkout" element={<Checkout/>}/><Route path="/onboarding" element={<ProtectedRoute><Onboarding/></ProtectedRoute>}/><Route path="/reset-password" element={<ResetPassword/>}/>
+<Route path="/dashboard" element={<ProtectedRoute><Dashboard/></ProtectedRoute>}/><Route path="/dashboard/hospedes" element={<ProtectedRoute><Hospedes/></ProtectedRoute>}/><Route path="/dashboard/quartos" element={<ProtectedRoute><Quartos/></ProtectedRoute>}/><Route path="/dashboard/caixa" element={<ProtectedRoute><Caixa/></ProtectedRoute>}/><Route path="/dashboard/restaurante" element={<ProtectedRoute><Restaurante/></ProtectedRoute>}/><Route path="/dashboard/relatorios" element={<ProtectedRoute><Relatorios/></ProtectedRoute>}/><Route path="/dashboard/reservas" element={<ProtectedRoute><Reservas/></ProtectedRoute>}/><Route path="/dashboard/auditoria" element={<ProtectedRoute><Auditoria/></ProtectedRoute>}/><Route path="/dashboard/assinatura" element={<ProtectedRoute><Assinatura/></ProtectedRoute>}/><Route path="/platform" element={<ProtectedRoute><SuperAdmin/></ProtectedRoute>}/>
+<Route path="*" element={<NotFound/>}/></Routes></BrowserRouter></TooltipProvider></AuthProvider></QueryClientProvider>;
 export default App;
