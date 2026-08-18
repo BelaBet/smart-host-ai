@@ -1,261 +1,284 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ClipboardList, Download, Eye, Filter, RefreshCw, ShieldCheck, UserRound } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useReservations } from "@/hooks/useReservations";
+import { useGuests } from "@/hooks/useGuests";
+import { useRooms } from "@/hooks/useRooms";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ShieldCheck, Search, CalendarDays, Users, Bed, Activity } from "lucide-react";
 
-interface AuditEntry {
+type AuditModule = "reservas" | "hospedes" | "quartos";
+type AuditAction = "criado" | "atualizado";
+
+interface AuditEvent {
   id: string;
-  actor_id: string | null;
-  action: "INSERT" | "UPDATE" | "DELETE";
-  table_name: string;
-  record_id: string;
-  occurred_at: string;
-  old_data: Record<string, unknown> | null;
-  new_data: Record<string, unknown> | null;
-  metadata: Record<string, unknown>;
+  module: AuditModule;
+  action: AuditAction;
+  description: string;
+  reference: string;
+  timestamp: Date;
 }
 
-const tableLabels: Record<string, string> = {
-  rooms: "Quartos",
-  reservations: "Reservas",
-  guests: "Hóspedes",
-  room_maintenance: "Manutenção",
-  cashier_sessions: "Caixa",
-  cashier_transactions: "Transações",
-  restaurant_products: "Produtos",
-  restaurant_orders: "Pedidos",
-  restaurant_order_items: "Itens de pedido",
+const moduleLabels: Record<AuditModule, string> = {
+  reservas: "Reservas",
+  hospedes: "Hóspedes",
+  quartos: "Quartos",
 };
 
-const actionLabels = {
-  INSERT: "Criou",
-  UPDATE: "Alterou",
-  DELETE: "Excluiu",
+const moduleIcons: Record<AuditModule, typeof CalendarDays> = {
+  reservas: CalendarDays,
+  hospedes: Users,
+  quartos: Bed,
 };
-
-function getEntityName(entry: AuditEntry) {
-  const data = entry.new_data ?? entry.old_data ?? {};
-  if (entry.table_name === "rooms") return `Quarto ${data.number ?? entry.record_id.slice(0, 8)}`;
-  if (entry.table_name === "reservations") return `Reserva ${data.confirmation_code ?? entry.record_id.slice(0, 8)}`;
-  if (entry.table_name === "guests") return String(data.name ?? `Hóspede ${entry.record_id.slice(0, 8)}`);
-  return `${tableLabels[entry.table_name] ?? entry.table_name} ${entry.record_id.slice(0, 8)}`;
-}
-
-function formatValue(value: unknown) {
-  if (value === null || value === undefined) return "—";
-  if (Array.isArray(value)) return value.join(", ");
-  if (typeof value === "object") return JSON.stringify(value, null, 2);
-  return String(value);
-}
-
-function changedFields(entry: AuditEntry) {
-  if (entry.action !== "UPDATE" || !entry.old_data || !entry.new_data) return [];
-  const keys = new Set([...Object.keys(entry.old_data), ...Object.keys(entry.new_data)]);
-  return [...keys]
-    .filter((key) => JSON.stringify(entry.old_data?.[key]) !== JSON.stringify(entry.new_data?.[key]))
-    .filter((key) => !["updated_at"].includes(key));
-}
 
 export default function Auditoria() {
-  const [entries, setEntries] = useState<AuditEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: reservations = [], isLoading: loadingReservations } = useReservations();
+  const { data: guests = [], isLoading: loadingGuests } = useGuests();
+  const { data: rooms = [], isLoading: loadingRooms } = useRooms();
+
   const [search, setSearch] = useState("");
-  const [tableFilter, setTableFilter] = useState("all");
-  const [actionFilter, setActionFilter] = useState("all");
-  const [selected, setSelected] = useState<AuditEntry | null>(null);
+  const [moduleFilter, setModuleFilter] = useState<"all" | AuditModule>("all");
+  const [actionFilter, setActionFilter] = useState<"all" | AuditAction>("all");
 
-  const loadAudit = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("audit_log")
-      .select("id, actor_id, action, table_name, record_id, occurred_at, old_data, new_data, metadata")
-      .order("occurred_at", { ascending: false })
-      .limit(1000);
+  const isLoading = loadingReservations || loadingGuests || loadingRooms;
 
-    if (!error) setEntries((data ?? []) as AuditEntry[]);
-    else console.error("Erro ao carregar auditoria:", error);
-    setLoading(false);
-  };
+  const events = useMemo<AuditEvent[]>(() => {
+    const list: AuditEvent[] = [];
 
-  useEffect(() => {
-    loadAudit();
-  }, []);
+    reservations.forEach((r) => {
+      list.push({
+        id: `${r.id}-created`,
+        module: "reservas",
+        action: "criado",
+        description: `Reserva ${r.confirmation_code} criada para ${r.guests?.name ?? "hóspede"} (quarto ${r.rooms?.number ?? "-"})`,
+        reference: r.confirmation_code,
+        timestamp: new Date(r.created_at),
+      });
+      if (r.updated_at && r.updated_at !== r.created_at) {
+        list.push({
+          id: `${r.id}-updated`,
+          module: "reservas",
+          action: "atualizado",
+          description: `Reserva ${r.confirmation_code} atualizada — status atual: ${r.status}`,
+          reference: r.confirmation_code,
+          timestamp: new Date(r.updated_at),
+        });
+      }
+    });
 
-  const filtered = useMemo(() => entries.filter((entry) => {
-    const actor = String(entry.metadata?.actor_email ?? entry.actor_id ?? "").toLowerCase();
-    const entity = getEntityName(entry).toLowerCase();
-    const matchesSearch = !search || actor.includes(search.toLowerCase()) || entity.includes(search.toLowerCase()) || entry.record_id.includes(search);
-    const matchesTable = tableFilter === "all" || entry.table_name === tableFilter;
-    const matchesAction = actionFilter === "all" || entry.action === actionFilter;
-    return matchesSearch && matchesTable && matchesAction;
-  }), [entries, search, tableFilter, actionFilter]);
+    guests.forEach((g) => {
+      list.push({
+        id: `${g.id}-created`,
+        module: "hospedes",
+        action: "criado",
+        description: `Hóspede ${g.name} cadastrado (${g.email})`,
+        reference: g.name,
+        timestamp: new Date(g.created_at),
+      });
+      if (g.updated_at && g.updated_at !== g.created_at) {
+        list.push({
+          id: `${g.id}-updated`,
+          module: "hospedes",
+          action: "atualizado",
+          description: `Cadastro do hóspede ${g.name} atualizado`,
+          reference: g.name,
+          timestamp: new Date(g.updated_at),
+        });
+      }
+    });
 
-  const stats = useMemo(() => ({
-    total: filtered.length,
-    changes: filtered.filter((e) => e.action === "UPDATE").length,
-    creates: filtered.filter((e) => e.action === "INSERT").length,
-    deletes: filtered.filter((e) => e.action === "DELETE").length,
-  }), [filtered]);
+    rooms.forEach((room) => {
+      list.push({
+        id: `${room.id}-created`,
+        module: "quartos",
+        action: "criado",
+        description: `Quarto ${room.number} cadastrado (${room.type})`,
+        reference: room.number,
+        timestamp: new Date(room.created_at),
+      });
+      if (room.updated_at && room.updated_at !== room.created_at) {
+        list.push({
+          id: `${room.id}-updated`,
+          module: "quartos",
+          action: "atualizado",
+          description: `Quarto ${room.number} atualizado — status atual: ${room.status}`,
+          reference: room.number,
+          timestamp: new Date(room.updated_at),
+        });
+      }
+    });
 
-  const exportCsv = () => {
-    const header = ["Data/Hora", "Usuário", "Ação", "Módulo", "Registro", "Campos alterados"];
-    const rows = filtered.map((entry) => [
-      new Date(entry.occurred_at).toISOString(),
-      String(entry.metadata?.actor_email ?? entry.actor_id ?? "system"),
-      actionLabels[entry.action],
-      tableLabels[entry.table_name] ?? entry.table_name,
-      getEntityName(entry),
-      changedFields(entry).join(" | "),
-    ]);
-    const csv = [header, ...rows].map((row) => row.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(",")).join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `auditoria-${format(new Date(), "yyyy-MM-dd-HHmm")}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
+    return list.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }, [reservations, guests, rooms]);
+
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return events.filter((e) => {
+      if (moduleFilter !== "all" && e.module !== moduleFilter) return false;
+      if (actionFilter !== "all" && e.action !== actionFilter) return false;
+      if (term && !e.description.toLowerCase().includes(term) && !e.reference.toLowerCase().includes(term))
+        return false;
+      return true;
+    });
+  }, [events, search, moduleFilter, actionFilter]);
+
+  const stats = useMemo(
+    () => ({
+      total: events.length,
+      hoje: events.filter(
+        (e) => format(e.timestamp, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd")
+      ).length,
+      criacoes: events.filter((e) => e.action === "criado").length,
+      atualizacoes: events.filter((e) => e.action === "atualizado").length,
+    }),
+    [events]
+  );
 
   return (
     <DashboardLayout>
-      <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center">
-                <ShieldCheck className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold font-display">Auditoria</h1>
-                <p className="text-muted-foreground">Histórico completo das alterações feitas no sistema</p>
-              </div>
-            </div>
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6 min-w-0">
+        <header className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-lg gradient-gold flex items-center justify-center flex-shrink-0">
+            <ShieldCheck className="w-5 h-5 text-primary" />
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={loadAudit} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Atualizar
-            </Button>
-            <Button onClick={exportCsv} disabled={!filtered.length}>
-              <Download className="h-4 w-4 mr-2" /> Exportar CSV
-            </Button>
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-display font-bold">Auditoria</h1>
+            <p className="text-muted-foreground text-sm">
+              Histórico de atividades registradas no sistema
+            </p>
           </div>
-        </div>
+        </header>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card><CardContent className="p-5"><p className="text-sm text-muted-foreground">Eventos</p><p className="text-2xl font-bold mt-1">{stats.total}</p></CardContent></Card>
-          <Card><CardContent className="p-5"><p className="text-sm text-muted-foreground">Alterações</p><p className="text-2xl font-bold mt-1">{stats.changes}</p></CardContent></Card>
-          <Card><CardContent className="p-5"><p className="text-sm text-muted-foreground">Criações</p><p className="text-2xl font-bold mt-1">{stats.creates}</p></CardContent></Card>
-          <Card><CardContent className="p-5"><p className="text-sm text-muted-foreground">Exclusões</p><p className="text-2xl font-bold mt-1">{stats.deletes}</p></CardContent></Card>
+          {[
+            { label: "Eventos totais", value: stats.total, icon: Activity },
+            { label: "Hoje", value: stats.hoje, icon: CalendarDays },
+            { label: "Criações", value: stats.criacoes, icon: Users },
+            { label: "Atualizações", value: stats.atualizacoes, icon: Bed },
+          ].map((s) => (
+            <Card key={s.label}>
+              <CardContent className="p-4 flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                  <s.icon className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground truncate">{s.label}</p>
+                  <p className="text-xl font-semibold">{s.value}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_190px_170px_auto] gap-3">
-              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por usuário, registro ou entidade..." />
-              <Select value={tableFilter} onValueChange={setTableFilter}>
-                <SelectTrigger><SelectValue placeholder="Módulo" /></SelectTrigger>
+          <CardHeader>
+            <CardTitle className="text-lg">Registros</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por descrição ou referência..."
+                  className="pl-9"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <Select value={moduleFilter} onValueChange={(v) => setModuleFilter(v as typeof moduleFilter)}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Módulo" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os módulos</SelectItem>
-                  {Object.entries(tableLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+                  <SelectItem value="reservas">Reservas</SelectItem>
+                  <SelectItem value="hospedes">Hóspedes</SelectItem>
+                  <SelectItem value="quartos">Quartos</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={actionFilter} onValueChange={setActionFilter}>
-                <SelectTrigger><SelectValue placeholder="Ação" /></SelectTrigger>
+              <Select value={actionFilter} onValueChange={(v) => setActionFilter(v as typeof actionFilter)}>
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <SelectValue placeholder="Ação" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as ações</SelectItem>
-                  <SelectItem value="INSERT">Criações</SelectItem>
-                  <SelectItem value="UPDATE">Alterações</SelectItem>
-                  <SelectItem value="DELETE">Exclusões</SelectItem>
+                  <SelectItem value="criado">Criação</SelectItem>
+                  <SelectItem value="atualizado">Atualização</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="ghost" onClick={() => { setSearch(""); setTableFilter("all"); setActionFilter("all"); }}>
-                <Filter className="h-4 w-4 mr-2" /> Limpar
-              </Button>
             </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><ClipboardList className="h-5 w-5" /> Linha do tempo de auditoria</CardTitle></CardHeader>
-          <CardContent className="p-0">
-            {loading ? (
-              <div className="p-8 text-center text-muted-foreground">Carregando histórico...</div>
-            ) : filtered.length === 0 ? (
-              <div className="p-10 text-center text-muted-foreground">Nenhum evento encontrado com esses filtros.</div>
-            ) : (
-              <div className="divide-y">
-                {filtered.map((entry) => {
-                  const fields = changedFields(entry);
-                  const actor = String(entry.metadata?.actor_email ?? "Usuário do sistema");
-                  return (
-                    <div key={entry.id} className="p-4 hover:bg-muted/30 transition-colors">
-                      <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0"><UserRound className="h-4 w-4" /></div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-semibold">{actor}</span>
-                            <Badge variant={entry.action === "DELETE" ? "destructive" : entry.action === "INSERT" ? "default" : "secondary"}>{actionLabels[entry.action]}</Badge>
-                            <Badge variant="outline">{tableLabels[entry.table_name] ?? entry.table_name}</Badge>
-                          </div>
-                          <p className="text-sm mt-1 text-foreground">{getEntityName(entry)}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {format(new Date(entry.occurred_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
-                            {fields.length > 0 && ` · ${fields.length} campo(s) alterado(s): ${fields.slice(0, 4).join(", ")}${fields.length > 4 ? "..." : ""}`}
-                          </p>
-                        </div>
-                        <Button variant="outline" size="sm" onClick={() => setSelected(entry)}><Eye className="h-4 w-4 mr-2" /> Detalhes</Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            <div className="rounded-lg border border-border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="whitespace-nowrap">Data/Hora</TableHead>
+                    <TableHead>Módulo</TableHead>
+                    <TableHead>Ação</TableHead>
+                    <TableHead className="min-w-[240px]">Descrição</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                        Carregando registros...
+                      </TableCell>
+                    </TableRow>
+                  ) : filtered.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                        Nenhum registro encontrado.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filtered.slice(0, 200).map((e) => {
+                      const Icon = moduleIcons[e.module];
+                      return (
+                        <TableRow key={e.id}>
+                          <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                            {format(e.timestamp, "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </TableCell>
+                          <TableCell>
+                            <span className="inline-flex items-center gap-2 text-sm">
+                              <Icon className="w-4 h-4 text-muted-foreground" />
+                              {moduleLabels[e.module]}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={e.action === "criado" ? "default" : "secondary"}>
+                              {e.action === "criado" ? "Criação" : "Atualização"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm">{e.description}</TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
-
-      <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
-          <DialogHeader><DialogTitle>Detalhes da auditoria</DialogTitle></DialogHeader>
-          {selected && (
-            <ScrollArea className="max-h-[70vh] pr-4">
-              <div className="space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                  <div><span className="text-muted-foreground">Usuário</span><p className="font-medium">{String(selected.metadata?.actor_email ?? selected.actor_id ?? "system")}</p></div>
-                  <div><span className="text-muted-foreground">Data</span><p className="font-medium">{format(new Date(selected.occurred_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}</p></div>
-                  <div><span className="text-muted-foreground">Ação</span><p className="font-medium">{actionLabels[selected.action]}</p></div>
-                  <div><span className="text-muted-foreground">Registro</span><p className="font-medium break-all">{selected.record_id}</p></div>
-                </div>
-
-                {selected.action === "UPDATE" ? (
-                  <div className="border rounded-lg overflow-hidden">
-                    <div className="grid grid-cols-3 bg-muted px-4 py-2 text-sm font-semibold"><span>Campo</span><span>Antes</span><span>Depois</span></div>
-                    {changedFields(selected).map((field) => (
-                      <div key={field} className="grid grid-cols-3 gap-3 px-4 py-3 border-t text-sm">
-                        <span className="font-medium break-words">{field}</span>
-                        <pre className="whitespace-pre-wrap break-words text-muted-foreground">{formatValue(selected.old_data?.[field])}</pre>
-                        <pre className="whitespace-pre-wrap break-words">{formatValue(selected.new_data?.[field])}</pre>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="border rounded-lg p-4"><p className="font-semibold mb-2">{selected.action === "INSERT" ? "Dados criados" : "Dados excluídos"}</p><pre className="text-xs whitespace-pre-wrap break-words">{JSON.stringify(selected.action === "INSERT" ? selected.new_data : selected.old_data, null, 2)}</pre></div>
-                )}
-              </div>
-            </ScrollArea>
-          )}
-        </DialogContent>
-      </Dialog>
     </DashboardLayout>
   );
 }
